@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>croissant</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;  
+        }
+        canvas {
+            background: transparent;
+            display: block;  
+        }
+    </style>
+</head>
+<body>
+    <canvas id="croissantCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById("croissantCanvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let croissantX = canvas.width / 2;   
+        let croissantY = canvas.height / 2;
+        let croissantSize = 80;
+        let isFollowingMouse = true;
+        let mouseX = 0;
+        let mouseY = 0;
+        let smallCroissants = [];
+        let pigeons = [];
+
+        const croissantImage = new Image();
+        croissantImage.src = 'better_croissant.png';
+
+        const pigeonImage = new Image();
+        pigeonImage.src = 'pigeon.png';  
+        const backgroundImage = new Image();
+        backgroundImage.src = 'bakery.jpeg';
+
+        document.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+
+        function startFloating(croissant) {
+            croissant.xSpeed = Math.random() * 2 - 1;   
+            croissant.ySpeed = Math.random() * 2 - 1;   
+        }
+
+        function drawCroissant(x, y, size) {
+            ctx.drawImage(croissantImage, x - size, y - size, size * 2, size * 2);
+        }
+
+        function createSmallCroissants() {
+            for (let i = 0; i < 30; i++) {
+                let size = Math.random() * 50 + 20;  
+                let x = Math.random() * canvas.width;
+                let y = Math.random() * canvas.height;
+                let smallCroissant = {
+                    x: x,
+                    y: y,
+                    size: size,
+                    xSpeed: Math.random() * 7 - 1,
+                    ySpeed: Math.random() * 9 - 1
+                };
+                smallCroissants.push(smallCroissant);
+            }
+        }
+
+        function moveAndDrawSmallCroissants() {
+            smallCroissants.forEach(croissant => {
+                croissant.x += croissant.xSpeed;
+                croissant.y += croissant.ySpeed;         
+                if (croissant.x < 0 || croissant.x > canvas.width) croissant.xSpeed *= -1;
+                if (croissant.y < 0 || croissant.y > canvas.height) croissant.ySpeed *= -1;
+                drawCroissant(croissant.x, croissant.y, croissant.size);
+            });
+        }
+
+        function createPigeons() {
+            for (let i = 0; i < 10; i++) {
+                let pigeon = {
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: 60,   
+                    speed: 1,
+                    xSpeed: 0,
+                    ySpeed: 0
+                };
+                pigeons.push(pigeon);
+            }
+        }
+
+        function moveAndDrawPigeons() {
+            pigeons.forEach(pigeon => {
+                if (smallCroissants.length > 0) {
+                    const target = smallCroissants[0];  
+                    const dx = target.x - pigeon.x;
+                    const dy = target.y - pigeon.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const speed = pigeon.speed;
+
+                    if (distance > 3) {
+                        pigeon.x += (dx / distance) * speed;
+                        pigeon.y += (dy / distance) * speed;
+                    }
+
+                    ctx.drawImage(pigeonImage, pigeon.x - pigeon.size / 2, pigeon.y - pigeon.size / 2, pigeon.size, pigeon.size);
+
+                    if (distance < target.size) {
+                        smallCroissants.splice(0, 1);  
+                    }
+                }
+            });
+        }
+
+        function avoidMouse() {
+            const dx = mouseX - croissantX;
+            const dy = mouseY - croissantY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < 100) {  
+                const angle = Math.atan2(dy, dx);
+                const speed = 15;   //speed at which the croissant avoids the mouse
+                croissantX -= Math.cos(angle) * speed;
+                croissantY -= Math.sin(angle) * speed;
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);  
+            ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+            if (isFollowingMouse) {
+                const dx = mouseX - croissantX;
+                const dy = mouseY - croissantY;
+                croissantX += dx * 0.1;   
+                croissantY += dy * 0.1;
+                drawCroissant(croissantX, croissantY, croissantSize);
+            } else {       
+                drawCroissant(croissantX, croissantY, croissantSize);
+                avoidMouse();
+                moveAndDrawSmallCroissants();  
+                moveAndDrawPigeons(); 
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        setTimeout(() => {
+            isFollowingMouse = false;  
+            createSmallCroissants();    
+            createPigeons();   
+        }, 3000); // time before croissants spawn
+        animate();
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            smallCroissants = [];
+        });
+    </script>
+</body>
+</html>
